@@ -1,0 +1,364 @@
+/* Author: Dex Works */
+function getCheckoutFrete() {
+	var campo1 = $("#CliCep").val();
+	var campo2 = $("#vtotalpeso").val();
+	var campo3 = $("#vtotalprod").val();
+	var msgbox1 = $(".checkout-ajax");
+	var msgbox2 = $("#checkout-frete");
+	var btnchk = $("#checkout-btnsubmit");
+	if (campo1.length > 7) {
+		$(msgbox1).html('<img src="img/ajax-loader.gif">&nbsp;Calculando frete..').show();
+		$(msgbox2).slideUp();
+		$(btnchk).slideUp();
+		$.ajax({
+			type: "POST",
+			url: "_s_frete",
+			data: "action=checkout-frete&clicep=" + campo1 + "&totalpeso=" + campo2 + "&totalprod=" + campo3,
+			success: function (respostahtml) {
+				if (respostahtml.length > 35) {
+					$(msgbox1).slideUp();
+					$(msgbox2).html(respostahtml).slideDown();
+					$(btnchk).html('<button type="submit">FINALIZAR COMPRA &raquo;</button>').slideDown();
+				} else {
+					$(msgbox1).slideUp();
+					$(msgbox2).html('<p>Por favor informe seu <strong>CEP</strong></p>').slideDown();
+					$(btnchk).html('<button type="submit" disabled>&laquo;</button>').slideDown();
+				}
+				$.getScript("_s_frete?action=getEndereco&clicep=" + campo1, function(){
+					if(resultadoCEP["resultado"]){
+						$("#CliEnd").val(unescape(resultadoCEP["tipo_logradouro"])+" "+unescape(resultadoCEP["logradouro"]));
+						$("#CliBairro").val(unescape(resultadoCEP["bairro"]));
+						$("#CliCidade").val(unescape(resultadoCEP["cidade"]));
+						$("#CliUf").val(unescape(resultadoCEP["uf"]));
+					}else{
+						alert("Complete seu endereço");
+					}
+				});
+			},
+			error: function (erro) {
+				$(msgbox1).slideUp(200);
+				$(msgbox2).html('ERRO').slideDown(200);
+			}
+		});
+		return false;
+	} else {
+		$(msgbox1).slideUp(200);
+		$(msgbox2).html('<p>Por favor informe seu <b>CEP</b></p>').slideDown(200);
+	}
+}
+
+$(function(){	
+	
+	/* Active Highlights - padrões
+	================================================= */
+	var patternPage = /pag\/[0-9]+$/.exec(window.location.pathname);
+	$(".pagination").find("a[href$='"+ patternPage +"']").addClass("active");
+	
+	var patternCate = /categoria\/[a-zA-Z0-9]*/.exec(window.location.pathname);
+	$("header nav li").find("a[href='" + patternCate + "']").addClass("active");
+	$("aside.nav li").find("a[href='" + patternCate + "']").addClass("active");
+	
+	var patternEsco = /categoria\/[a-zA-Z0-9]*\/escola\/[a-zA-Z0-9]*/.exec(window.location.pathname);
+	$("aside.nav li").find("a[href='" + patternEsco + "']").addClass("active");	
+	
+	// Navegação subcategorias
+	$("aside.nav .nextlevel > a.active").parent().children('ul').slideToggle(); 
+	$("aside.nav .nextlevel > ul li .active").parent().parent().parent().children('ul').slideToggle();
+		
+	
+	/* Ajax search
+	================================================= */
+	$(".search-close").live('click',function(){
+		$("#search-box").fadeOut();
+		return false;
+	});
+
+	$('#search-form').submit(function (event) {  
+	//	var keyword = $("#search-field").val();
+	// 	if (keyword.length > 2){			
+	// 		$('#ajax-loader-indicator').show();
+	// 		$.ajax({
+	// 			url: '/categoria?action=Search&keyword=' + encodeURIComponent(keyword),
+	// 			success: function(data) {
+	// 				$('#search-box').html( data ).slideDown();
+	// 				$('#search-box').append("<li class='search-close'>--- Fechar ---</li>");
+	// 				$('#ajax-loader-indicator').hide();
+	// 			}
+	// 		});
+	// 	};
+	// 	return false;
+		$('#ajax-loader-indicator').show();
+	});
+
+	// $( function() {
+	//   // quick search regex
+	//   var qsRegex;
+	  
+	//   // init Isotope
+	//   var $grid = $('.grid').isotope({
+	//     itemSelector: '.element-item',
+	//     layoutMode: 'fitRows',
+	//     filter: function() {
+	//       return qsRegex ? $(this).text().match( qsRegex ) : true;
+	//     }
+	//   });
+
+	//   // use value of search field to filter
+	//   var $quicksearch = $('.quicksearch').keyup( debounce( function() {
+	//     qsRegex = new RegExp( $quicksearch.val(), 'gi' );
+	//     $grid.isotope();
+	//   }, 200 ) );
+	  
+	// });
+
+	// // debounce so filtering doesn't happen every millisecond
+	// function debounce( fn, threshold ) {
+	//   var timeout;
+	//   return function debounced() {
+	//     if ( timeout ) {
+	//       clearTimeout( timeout );
+	//     }
+	//     function delayed() {
+	//       fn();
+	//       timeout = null;
+	//     }
+	//     timeout = setTimeout( delayed, threshold || 100 );
+	//   }
+	// }
+
+		
+	/* Cart Frete
+	================================================= */
+	$("#btncalcular").click(function () {
+        var data = $("#cart-shipping").serialize();
+		var box = $("#ajaxloader");
+		var btn = $("#btncalcular");
+        $( box ).html('<img src="img/ajax-loader.gif">').slideDown();
+        $( btn ).fadeOut(200).hide();
+        $.ajax({
+            type: "POST",
+            url: "_s_frete",
+            data: data,
+            success: function (msg) {
+                $( box ).ajaxComplete(function () {}).html(msg);
+                $( btn ).fadeIn(200).show();
+            },
+            error: function (msg) {
+                $( box ).html("ERRO");
+                $( btn ).fadeIn(200).show();
+            }
+        });
+        return false;
+    });
+	
+	/* Monitor CliCep field
+	========================================================== */
+	$("#checkout-form #CliCep").change(function () {
+		getCheckoutFrete();
+	});
+	
+	$(".freteopt").live('click',function(){
+		$('#valorfrete').hide().fadeIn(500);
+		$('#valorfrete').html($(this).attr('data-v'));
+		$('#valortotal').html($(this).attr('data-vt'));
+		$('#checkout-btnsubmit').html('<button type="submit">FINALIZAR COMPRA &raquo;</button>');
+	});
+	
+	$(".formapagamento").live('click',function(){
+		var element = $(this).val();
+		$('[id^="fade-"]').fadeOut(300);
+		$('#fade-'+element).fadeIn();
+	});
+
+	
+	/* Checkout
+	========================================================== */
+	$("#checkout-form").validate({
+		ignore: ":hidden",
+		rules:{
+			CliEmail:{required: true, email: true},CliNome:{required: true, minlength: 8},CliCpf:{required: true, minlength: 11, digits: true},
+			CliDdd:{required: true, minlength: 2, digits: true},CliTel:{required: true, minlength: 9, digits: true},
+			CliCep:{required: true, minlength: 8},CliEnd:{required: true},CliNum:{required: true},CliBairro:{required: true},CliCidade:{required: true},CliUf:{required: true},
+			
+			cielo_card_flag:{required: true}, cielo_card_number:{required: true, creditcard: true},
+			cielo_card_cvv:{required: true, digits: true}, cielo_card_month:{required: true},cielo_card_year:{required: true},
+
+			cielov3_card_flag:{required: true}, cielov3_card_number:{required: true, creditcard: true},
+			cielov3_card_cvv:{required: true}, cielov3_card_month:{required: true},cielov3_card_year:{required: true}
+		},
+		messages:{
+			CliEmail:"Digite um e-mail válido",CliNome:"Digite seu nome completo",CliCpf:{required: "Digite seu CPF",minlength: "Falta algum número?",digits:"Somente números"},
+			CliDdd:"DDD ex. 82",CliTel:{required: "Digite seu telefone",minlength: "Falta algum número?",digits:"Somente números"},
+			
+			CliCep:{required: "Informe seu Cep",minlength: "Falta algum número?"},CliEnd:"Informe seu endereço",
+			CliNum:"Informe o número",CliBairro:"Informe seu bairro",CliCidade:"Informe sua cidade",CliUf:"Informe seu estado",
+			
+			cielo_card_flag:"Campo obrigatório", cielo_card_number:{required: "Campo obrigatório"}, 
+			cielo_card_cvv:{required: "Campo obrigatório",digits:"Somente números"}, cielo_card_month:"Campo obrigatório", cielo_card_year:"Campo obrigatório",
+
+			cielov3_card_flag:"Campo obrigatório", cielov3_card_number:{required: "Campo obrigatório"}, 
+			cielov3_card_cvv:"Campo obrigatório", cielov3_card_month:"Campo obrigatório", cielov3_card_year:"Campo obrigatório"
+		},
+		submitHandler: function(form) {
+			var ajaxForm = $('#checkout-form');
+			var btn = $('#checkout-form button');
+			var btntxt = 'FINALIZAR COMPRA &raquo;'
+			$( btn ).html('Aguarde... <img src="img/ajax-loader.gif">').prop("disabled", true);
+			$.ajax({
+				type: ajaxForm.attr('data-method'),
+				url: ajaxForm.attr('data-action') + "?ajax=true",
+				data: ajaxForm.serialize(),
+				success: function (msg) {
+					var text = $( '<div>'+msg+'</div>' );
+					var ajaxAction = text.find('#ajaxAction').html();
+					var ajaxResponse = text.find('#ajaxResponse').html()
+					if (ajaxAction == "FALHA") {
+						$( btn ).html(btntxt).prop("disabled", false);
+						$('#fade-Cielo').find('input:text').val('');
+						$("#fade-Cielo option[value='']").attr('selected', true)
+						alert( ajaxResponse );
+					} else if (ajaxAction=="SUCESSO") {
+						$( btn ).html('Redirecionando...')
+						window.location.replace( unescape(ajaxResponse) );	// no browser history
+					//	window.location.href = ( unescape(ajaxResponse) );	// yes browser history
+					} else {
+						$( btn ).html(btntxt).prop("disabled", false);
+						alert( ajaxResponse );
+					}
+				},
+				error: function (msg) {
+					$( btn ).html(btntxt).prop("disabled", false);
+					alert( 'Um erro desconhecido ocorreu. Por favor entre em contato.' );
+				}
+			});
+			return false;
+		}
+	});
+		
+	
+	/* Validates
+	========================================================== */
+	$("#login-form").validate({
+		ignore: ":hidden",
+		rules:{
+			CliEmail:{required: true, email: true},password:{required: true, minlength: 3}
+		},
+		messages:{
+			CliEmail:{required: "Digite seu e-mail corretamente",email: "Digite um e-mail válido"},password:{required: "Digite o seu password",minlength:"Digite o seu password"}
+		}
+	});
+	
+	$('#forgot-password').click(function () {
+		$('#forgot_password').slideDown(300, function () { $(this).addClass('on'); });
+		if ($('#forgot_password').hasClass('on')) { $('#forgot_password').slideUp(300); $('#forgot_password').removeClass('on'); }
+		return false;
+	});
+	
+	$("#register-form").validate({
+		ignore: ":hidden",
+		rules:{
+			CliEmail:{required: true, email: true},CliNome:{required: true, minlength: 8},CliDdd:{required: true, minlength: 2, digits: true},
+			CliTel:{required: true, minlength: 9, digits: true},
+			password:{required: true, minlength: 3},c_password:{required: true, equalTo: "#password"}              
+		},
+		messages:{
+			CliEmail:"Digite um e-mail válido",CliNome:"Digite o seu nome completo",CliDdd:"Digite seu DDD sem o Zero",
+			CliTel:{required: "Informe seu telefone",minlength: "Falta algum número?",digits:"Digite somente números"},
+			password:{required: "Informe a senha",minlength: "Com pelo menos 3 caracteres"},c_password:{required: "Confirme a senha",equalTo:"A senha não confere"}
+		}
+	});
+	
+	$("#contact-form").validate({
+		ignore: ":hidden",
+		rules:{
+			CliEmail:{required: true, email: true},CliNome:{required: true, minlength: 8},
+			assunto:{required: true},mensagem:{required: true}
+		},
+		messages:{
+			CliEmail:{required: "Digite seu e-mail corretamente",email: "Digite um e-mail válido"},CliNome:{required: "Digite o seu nome completo",minlength:"Digite o seu nome completo"},
+			assunto:{required: "Informe o assunto"},mensagem:{required: "Escreva a mensagem"}
+		}
+	});
+
+	$("#request-previous-orders").validate({
+		ignore: ":hidden",
+		rules:{
+			CliCpf:{required: true, minlength: 11, digits: true}
+		},
+		messages:{
+			CliCpf:{required: "Digite seu CPF",minlength: "Falta algum número?",digits:"Somente números"}
+		}
+	});
+	
+
+	/* Localizar pedidos anteriores
+	================================================= */
+	$('#request-previous-orders').submit(function (event) {  
+		var keyword = $("#CliCpf").val();
+		var btn = $('#request-previous-orders button');
+		var box = $('#request-previous-orders-results');
+		if (keyword.length > 10){
+			$( box ).slideUp();
+			$( btn ).html('Aguarde... <img src="img/ajax-loader.gif">').attr("disabled", "disabled");
+			$.ajax({
+				url: '/login?action=Search&keyword=' + encodeURIComponent(keyword),
+				success: function(data) {
+					$( box ).html( data ).slideDown();
+					$( btn ).html('Localizar novamente').removeAttr("disabled");
+				}
+			});
+		};
+		return false;
+	});
+	
+	
+	/* Plugins
+	========================================================== */	
+	$(".top-slider").flexslider({
+		animation : "slide",
+		randomize : true
+	});
+
+	$(".home-banner-slider").flexslider({
+		animation : "slide",
+		randomize : false
+	});
+
+	$(".home-prod-slider").flexslider({
+		animation : "slide",
+		randomize : true,
+		itemWidth: 230,
+		itemMargin: 5,
+		slideshowSpeed: 6000
+	});
+
+	$(".product-image-slider").flexslider({
+		animation : "slide"
+	});
+	
+	$(".fancybox").fancybox({	
+		helpers:{
+			overlay:{ css:{'background' : 'rgba(100, 100, 100, 0.65)'}, locked : false },
+			title:{ type: 'inside' }
+		}
+	});
+	
+	/* Placeholder fix
+	========================================================== */
+	if (!Modernizr.input.placeholder) {
+		$("input").each( function () {
+			if ($(this).val() == "" && $(this).attr("placeholder") != "") {
+				$(this).val($(this).attr("placeholder"));
+				$(this).focus(function () {
+					if ($(this).val() == $(this).attr("placeholder")) $(this).val("");
+				});
+				$(this).blur(function () {
+					if ($(this).val() == "") $(this).val($(this).attr("placeholder"));
+				});
+			}
+		});
+	}
+	
+});
+
+
